@@ -23,7 +23,12 @@ function main ({
   const source = new Source(typeDef);
   const gqlSchema = buildSchema(source, { assumeValidSDL: assume });
 
-  del.sync(destDirPath);
+  if (fs.existsSync(destDirPath)) {
+    if (fs.readdirSync(destDirPath).length > 0) {
+      del.sync(destDirPath);
+    }
+  }
+  
   path.resolve(destDirPath).split(path.sep).reduce((before, cur) => {
     const pathTmp = path.join(before, cur + path.sep);
     if (!fs.existsSync(pathTmp)) {
