@@ -124,7 +124,7 @@ function main ({
           return includeDeprecatedFields || !fieldSchema.deprecationReason;
         })
         .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
-          crossReferenceKeyList, curDepth + 1, fromUnion).queryStr)
+          [...crossReferenceKeyList], curDepth + 1, fromUnion).queryStr)
         .filter(cur => Boolean(cur))
         .join('\n');
     }
@@ -154,7 +154,7 @@ function main ({
           const valueType = gqlSchema.getType(valueTypeName);
           const unionChildQuery = Object.keys(valueType.getFields())
             .map(cur => generateQuery(cur, valueType, curName, argumentsDict, duplicateArgCounts,
-              crossReferenceKeyList, curDepth + 2, true).queryStr)
+              [...crossReferenceKeyList], curDepth + 2, true).queryStr)
             .filter(cur => Boolean(cur))
             .join('\n');
 
