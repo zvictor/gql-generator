@@ -3,6 +3,12 @@ type Query {
     members: [Member!] @deprecated(reason: "Test a deprecated query")
 }
 
+input ContextInput {
+    user: User!
+    domain: String!
+    card: Card!
+}
+
 type Mutation {
     signup(
         email: String!
@@ -22,6 +28,10 @@ type Mutation {
     sendMessage(
         message: String!
     ): String! @deprecated(reason: "Test a deprecated mutation")
+
+    updateContext(
+        data: ContextInput!
+    ): Context!
 }
 
 input PrefsInput {
@@ -72,6 +82,7 @@ type Premium {
 type Card {
     number: String!
     type: [CardType!]!
+    owner: User!
 }
 
 type CardType {
@@ -81,4 +92,5 @@ type CardType {
 type Context {
     user: User! # Circular ref
     domain: String!
+    card: Card!
 }

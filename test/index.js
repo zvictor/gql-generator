@@ -5,6 +5,42 @@ test('validate generated queries', async () => {
   cp.execSync('node index.js --schemaFilePath ./example/sampleTypeDef.graphql --destDirPath ./example/output');
   const queries = require('../example/output');
   queries.mutations.signin.indexOf('signin').should.not.equal(-1);
+  
+  const expected = `query user($language: String, $id: Int!){
+    user(id: $id){
+        id
+        username
+        email
+        createdAt
+        context{
+            domain
+            card{
+                number
+                type{
+                    key
+                }
+            }
+        }
+        details{
+            ... on Guest {
+                region(language: $language)
+            }
+            ... on Member {
+                address
+            }
+            ... on Premium {
+                location
+                card{
+                    number
+                    type{
+                        key
+                    }
+                }
+            }
+        }
+    }
+}`;
+  should(queries.queries.user).be.equal(expected);
 });
 
 test('limit depth', async () => {
@@ -119,7 +155,7 @@ test('includes cross reference with the --includeCrossReferences flag', async ()
   should(queries.mutations.sendMessage === undefined).be.true();
 
   // The context domain field should be included multiple times
-  const expected = `query user($language: String, $language1: String, $id: Int!){
+  const expected = `query user($language: String, $language1: String, $language2: String, $language3: String, $id: Int!){
     user(id: $id){
         id
         username
@@ -150,10 +186,33 @@ test('includes cross reference with the --includeCrossReferences flag', async ()
                 }
             }
             domain
+            card{
+                number
+                type{
+                    key
+                }
+                owner{
+                    id
+                    username
+                    email
+                    createdAt
+                    details{
+                        ... on Guest {
+                            region(language: $language1)
+                        }
+                        ... on Member {
+                            address
+                        }
+                        ... on Premium {
+                            location
+                        }
+                    }
+                }
+            }
         }
         details{
             ... on Guest {
-                region(language: $language1)
+                region(language: $language2)
             }
             ... on Member {
                 address
@@ -164,6 +223,26 @@ test('includes cross reference with the --includeCrossReferences flag', async ()
                     number
                     type{
                         key
+                    }
+                    owner{
+                        id
+                        username
+                        email
+                        createdAt
+                        context{
+                            domain
+                        }
+                        details{
+                            ... on Guest {
+                                region(language: $language3)
+                            }
+                            ... on Member {
+                                address
+                            }
+                            ... on Premium {
+                                location
+                            }
+                        }
                     }
                 }
             }
