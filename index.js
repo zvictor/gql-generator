@@ -76,24 +76,23 @@ function main ({
   /**
    * Generate the query for the specified field
    * @param curName name of the current field
-   * @param curParentType parent type of the current field
+   * @param curParentTypes parent types of the current field
    * @param curParentName parent name of the current field
    * @param argumentsDict dictionary of arguments from all fields
    * @param duplicateArgCounts map for deduping argument name collisions
-   * @param crossReferenceKeyList list of the cross reference
    * @param curDepth current depth of field
    * @param fromUnion adds additional depth for unions to avoid empty child
    */
   const generateQuery = (
     curName,
-    curParentType,
+    curParentTypes,
     curParentName,
     argumentsDict = {},
     duplicateArgCounts = {},
-    crossReferenceKeyList = [], // [`${curParentName}To${curName}Key`]
     curDepth = 1,
     fromUnion = false,
   ) => {
+    const curParentType = curParentTypes.slice(-1)[0];
     const field = gqlSchema.getType(curParentType).getFields()[curName];
     const curTypeName = field.type.toJSON().replace(/[[\]!]/g, '');
     const curType = gqlSchema.getType(curTypeName);
@@ -101,16 +100,13 @@ function main ({
     let childQuery = '';
 
     if (curType.getFields) {
-      const crossReferenceKey = `${curParentName}To${curName}Key`;
       if (
-        (!includeCrossReferences && crossReferenceKeyList.indexOf(crossReferenceKey) !== -1)
+        (!includeCrossReferences && curParentTypes.find(type => type.name === curTypeName))
         || (fromUnion ? curDepth - 2 : curDepth) > depthLimit
       ) {
         return '';
       }
-      if (!fromUnion) {
-        crossReferenceKeyList.push(crossReferenceKey);
-      }
+
       const childKeys = Object.keys(curType.getFields());
       childQuery = childKeys
         .filter((fieldName) => {
@@ -118,8 +114,8 @@ function main ({
           const fieldSchema = gqlSchema.getType(curType).getFields()[fieldName];
           return includeDeprecatedFields || !fieldSchema.deprecationReason;
         })
-        .map(cur => generateQuery(cur, curType, curName, argumentsDict, duplicateArgCounts,
-          crossReferenceKeyList, curDepth + 1, fromUnion).queryStr)
+        .map(cur => generateQuery(cur, [...curParentTypes, curType], curName, argumentsDict, duplicateArgCounts,
+          curDepth + 1, fromUnion).queryStr)
         .filter(cur => Boolean(cur))
         .join('\n');
     }
@@ -148,8 +144,8 @@ function main ({
           const valueTypeName = types[i];
           const valueType = gqlSchema.getType(valueTypeName);
           const unionChildQuery = Object.keys(valueType.getFields())
-            .map(cur => generateQuery(cur, valueType, curName, argumentsDict, duplicateArgCounts,
-              crossReferenceKeyList, curDepth + 2, true).queryStr)
+            .map(cur => generateQuery(cur, [...curParentTypes,valueType], curName, argumentsDict, duplicateArgCounts,
+              curDepth + 2, true).queryStr)
             .filter(cur => Boolean(cur))
             .join('\n');
 
@@ -195,7 +191,7 @@ function main ({
       const field = gqlSchema.getType(description).getFields()[type];
       /* Only process non-deprecated queries/mutations: */
       if (includeDeprecatedFields || !field.deprecationReason) {
-        const queryResult = generateQuery(type, description);
+        const queryResult = generateQuery(type, [description]);
         const varsToTypesStr = getVarsToTypesStr(queryResult.argumentsDict);
         let query = queryResult.queryStr;
         let queryName;
